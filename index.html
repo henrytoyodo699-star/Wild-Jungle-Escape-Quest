@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Wild Jungle - Escape Quest</title>
+
+  <!-- CrazyGames SDK v2 (Uncomment when uploading to CrazyGames) -->
+  <!-- <script src="https://sdk.crazygames.com/crazygames-sdk-v2.js"></script> -->
+  <!-- Poki SDK (Uncomment when uploading to Poki) -->
+  <!-- <script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script> -->
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #09120c;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #game-canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* Main UI Layer */
+    #ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px;
+      z-index: 20;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+    }
+    .hud-box {
+      pointer-events: auto;
+      background: rgba(13, 27, 19, 0.9);
+      border: 1.5px solid #347a50;
+      border-radius: 12px;
+      padding: 12px 18px;
+      color: #e5f7ed;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+    }
+    #header-hud h1 {
+      font-size: 1.15rem;
+      color: #5ce68e;
+      margin-bottom: 3px;
+    }
+    #objective-hud {
+      font-size: 0.9rem;
+      color: #aed9be;
+    }
+
+    /* Monetization & Boost Controls */
+    .monetization-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .coin-badge {
+      background: rgba(255, 193, 7, 0.15);
+      border: 1.5px solid #ffc107;
+      color: #ffd54f;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      pointer-events: auto;
+    }
+    .reward-btn {
+      pointer-events: auto;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border: 2px solid #fde68a;
+      color: #fff;
+      font-weight: 700;
+      padding: 10px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .reward-btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+    }
+    .reward-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Collapsible Asset Debug Panel */
+    #debug-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 280px;
+      max-height: 180px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.7rem;
+      background: rgba(5, 12, 8, 0.9);
+      border: 1px solid #235035;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #92caa5;
+      pointer-events: auto;
+      z-index: 30;
+    }
+    #debug-panel h4 {
+      color: #5ce68e;
+      margin-bottom: 4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+    }
+    .debug-item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      padding: 2px 0;
+    }
+    .debug-ok { color: #5ce68e; }
+    .debug-fail { color: #ff5757; }
+
+    /* Inventory */
+    #inventory-bar {
+      align-self: center;
+      display: flex;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+    .slot {
+      width: 64px;
+      height: 64px;
+      border: 2px dashed #2f6b47;
+      border-radius: 10px;
+      background: rgba(10, 22, 16, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      color: #9cd4b3;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .slot.active {
+      border: 2px solid #5ce68e;
+      background: rgba(36, 85, 56, 0.7);
+      box-shadow: 0 0 12px rgba(92, 230, 142, 0.5);
+      transform: translateY(-4px);
+    }
+    .slot .icon {
+      font-size: 1.5rem;
+      margin-bottom: 2px;
+    }
+
+    #alert-dialog {
+      position: absolute;
+      bottom: 118px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: auto;
+      background: rgba(6, 14, 9, 0.95);
+      border: 1.5px solid #5ce68e;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      display: none;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+      text-align: center;
+      max-width: min(680px, calc(100vw - 32px));
+      z-index: 45;
+    }
+
+    /* Ad Break Modal Overlay */
+    #ad-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      color: #fff;
+      pointer-events: auto;
+    }
+    #ad-modal .ad-box {
+      background: #14241b;
+      border: 2px solid #5ce68e;
+      border-radius: 16px;
+      padding: 28px 36px;
+      text-align: center;
+      max-width: 400px;
+    }
+    #ad-modal h3 { color: #5ce68e; margin-bottom: 10px; }
+    #ad-modal p { color: #b7e2c8; font-size: 0.9rem; margin-bottom: 16px; }
+    .ad-timer { font-size: 1.5rem; font-weight: bold; color: #ffc107; }
+
+    /* Loading Overlay */
+    #loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #09120c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      color: #5ce68e;
+    }
+    .spinner {
+      width: 46px;
+      height: 46px;
+      border: 4px solid rgba(92, 230, 142, 0.2);
+      border-top-color: #5ce68e;
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+
+  <!-- Three.js + GLTFLoader -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="map_compiler.js"></script>
+</head>
+<body>
+
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <h2 id="loading-status">Loading 3D Jungle Assets...</h2>
+  </div>
+
+  <!-- Simulated / SDK Ad Break Modal -->
+  <div id="ad-modal">
+    <div class="ad-box">
+      <h3 id="ad-title">Sponsor Break</h3>
+      <p id="ad-desc">Your reward will be granted in a moment...</p>
+      <div class="ad-timer" id="ad-countdown">3s</div>
+    </div>
+  </div>
+
+  <div id="game-canvas"></div>
+
+  <div id="debug-panel">
+    <h4 onclick="const e=document.getElementById('debug-entries'); e.style.display=e.style.display==='none'?'block':'none';">
+      <span>📁 Asset Locations</span><span>[–]</span>
+    </h4>
+    <div id="debug-entries">Checking files...</div>
+  </div>
+
+  <div id="ui-layer">
+    <div class="top-bar">
+      <div id="header-hud" class="hud-box">
+        <h1 id="stage-title">Stage 1: The Bee Grove</h1>
+        <p id="objective-hud">Loading objective...</p>
+      </div>
+
+      <div class="monetization-panel">
+        <div class="coin-badge">🪙 Gems: <span id="gem-count">0</span></div>
+        <button class="reward-btn" onclick="AdManager.showRewardedAd()">
+          🎬 Watch Ad: Hint + 2x Speed
+        </button>
+      </div>
+    </div>
+
+    <div id="alert-dialog">Notification</div>
+
+    <div id="inventory-bar" class="hud-box">
+      <div class="slot" id="slot-0" onclick="selectSlot(0)"><span class="icon">🔍</span><span>Empty</span></div>
+      <div class="slot" id="slot-1" onclick="selectSlot(1)"><span class="icon">🔍</span><span>Empty</span></div>
+      <div class="slot" id="slot-2" onclick="selectSlot(2)"><span class="icon">🔍</span><span>Empty</span></div>
+      <div class="slot" id="slot-3" onclick="selectSlot(3)"><span class="icon">🔍</span><span>Empty</span></div>
+    </div>
+  </div>
+
+  <script>
+    // --- Game State & Browser Save ---
+    // localStorage survives refreshes and browser restarts for this website.
+    const SAVE_KEY = 'wild_jungle_escape_save_v2';
+    const defaultPuzzleState = () => ({
+      hasBranches: false,
+      hasFlint: false,
+      fireLit: false,
+      beesCleared: false,
+      hasMachete: false,
+      vinesCleared: false
+    });
+
+    function readSave() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
+        return saved && typeof saved === 'object' ? saved : {};
+      } catch (error) {
+        console.warn('Save data could not be read. Starting a new game.', error);
+        return {};
+      }
+    }
+
+    const savedGame = readSave();
+    const requestedLevel = Number(savedGame.currentLevel) || 1;
+    let currentLevel = Math.min(
+      Math.max(1, requestedLevel),
+      window.LevelManager.getLevelCount()
+    );
+    let inventory = Array.isArray(savedGame.inventory) ? savedGame.inventory.slice(0, 4) : [];
+    let selectedSlot = -1;
+    const legacyGems = Number(localStorage.getItem('wild_jungle_gems') || 0);
+    let gems = Math.max(0, Number(savedGame.gems) || legacyGems || 0);
+    let levelStates = savedGame.levelStates && typeof savedGame.levelStates === 'object'
+      ? savedGame.levelStates
+      : {};
+    let puzzleState = { ...defaultPuzzleState(), ...(levelStates[currentLevel] || {}) };
+    document.getElementById('gem-count').innerText = gems;
+
+    let isAdPlaying = false;
+    let moveSpeed = 6.2;
+    let hintBeacon = null;
+
+    function saveGame() {
+      try {
+        levelStates[currentLevel] = { ...puzzleState };
+        localStorage.setItem(SAVE_KEY, JSON.stringify({
+          version: 2,
+          currentLevel,
+          gems,
+          inventory,
+          levelStates,
+          savedAt: new Date().toISOString()
+        }));
+      } catch (error) {
+        console.warn('Game progress could not be saved.', error);
+      }
+    }
+
+    function loadLevelState(levelId) {
+      puzzleState = { ...defaultPuzzleState(), ...(levelStates[levelId] || {}) };
+      updateInventoryUI();
+    }
+
+    function addGems(amount) {
+      gems += amount;
+      document.getElementById('gem-count').innerText = gems;
+      saveGame();
+    }
+
+    // --- Portal Monetization SDK Wrapper (Poki / CrazyGames / Local Fallback) ---
+    const AdManager = {
+      // 1. Interstitial Ad (Between levels)
+      showInterstitial(onComplete) {
+        if (window.CrazyGames && window.CrazyGames.SDK) {
+          window.CrazyGames.SDK.ad.requestAd('midgame', {
+            adStarted: () => { isAdPlaying = true; AudioEngine.muted = true; },
+            adFinished: () => { isAdPlaying = false; AudioEngine.muted = false; if (onComplete) onComplete(); },
+            adError: () => { isAdPlaying = false; AudioEngine.muted = false; if (onComplete) onComplete(); }
+          });
+        } else if (window.PokiSDK) {
+          isAdPlaying = true; AudioEngine.muted = true;
+          window.PokiSDK.commercialBreak().then(() => {
+            isAdPlaying = false; AudioEngine.muted = false;
+            if (onComplete) onComplete();
+          });
+        } else {
+          // Localhost / Ad-Blocker Safe Fallback Simulation
+          this.simulateAd("Level Complete! Commercial Break", "Loading next stage...", 3, onComplete);
+        }
+      },
+
+      // 2. Rewarded Ad (Player clicks button for Hint + 2x Walk Speed + +25 Gems)
+      showRewardedAd() {
+        if (isAdPlaying) return;
+        const grantReward = () => {
+          addGems(25);
+          moveSpeed = 11.5; // 2x Speed Boost
+          spawnHintBeacon();
+          notify("⚡ Reward Unlocked! +25 Gems, 2x Speed & Quest Beacon active!");
+        };
+
+        if (window.CrazyGames && window.CrazyGames.SDK) {
+          window.CrazyGames.SDK.ad.requestAd('rewarded', {
+            adStarted: () => { isAdPlaying = true; AudioEngine.muted = true; },
+            adFinished: () => { isAdPlaying = false; AudioEngine.muted = false; grantReward(); },
+            adError: () => { isAdPlaying = false; AudioEngine.muted = false; grantReward(); }
+          });
+        } else if (window.PokiSDK) {
+          isAdPlaying = true; AudioEngine.muted = true;
+          window.PokiSDK.rewardedBreak().then((success) => {
+            isAdPlaying = false; AudioEngine.muted = false;
+            if (success) grantReward();
+          });
+        } else {
+          this.simulateAd("Rewarded Video Ad", "Watch for 3 seconds to unlock 2x Speed + Quest Hint Beacon!", 3, grantReward);
+        }
+      },
+
+      simulateAd(title, desc, seconds, callback) {
+        isAdPlaying = true;
+        AudioEngine.muted = true;
+        const modal = document.getElementById('ad-modal');
+        const countEl = document.getElementById('ad-countdown');
+        document.getElementById('ad-title').innerText = title;
+        document.getElementById('ad-desc').innerText = desc;
+        modal.style.display = 'flex';
+
+        let remaining = seconds;
+        countEl.innerText = remaining + 's';
+        const interval = setInterval(() => {
+          remaining--;
+          if (remaining > 0) {
+            countEl.innerText = remaining + 's';
+          } else {
+            clearInterval(interval);
+            modal.style.display = 'none';
+            isAdPlaying = false;
+            AudioEngine.muted = false;
+            if (callback) callback();
+          }
+        }, 1000);
+      }
+    };
+
+    // --- Three.js Scene & Isometric Camera ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0e1b12);
+    scene.fog = new THREE.FogExp2(0x0e1b12, 0.02);
+
+    const aspect = window.innerWidth / window.innerHeight;
+    const viewSize = 13;
+    const camera = new THREE.OrthographicCamera(
+      -viewSize * aspect, viewSize * aspect,
+      viewSize, -viewSize,
+      1, 1000
+    );
+    camera.position.set(22, 24, 22);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('game-canvas').appendChild(renderer.domElement);
+
+    // --- Lighting ---
+    scene.add(new THREE.AmbientLight(0xd9fae6, 0.8));
+    const sun = new THREE.DirectionalLight(0xfff5d0, 1.3);
+    sun.position.set(20, 36, 16);
+    sun.castShadow = true;
+    sun.shadow.mapSize.width = 2048;
+    sun.shadow.mapSize.height = 2048;
+    const sCam = 24;
+    sun.shadow.camera.left = -sCam;
+    sun.shadow.camera.right = sCam;
+    sun.shadow.camera.top = sCam;
+    sun.shadow.camera.bottom = -sCam;
+    scene.add(sun);
+
+    const tilesGroup = new THREE.Group();
+    const propsGroup = new THREE.Group();
+    scene.add(tilesGroup);
+    scene.add(propsGroup);
+
+    let interactables = [];
+    let character, mixer, currentAction;
+    let idleAction, walkAction;
+    let pendingInteraction = null;
+    const targetMove = new THREE.Vector3(0, 0, 0);
+    let isMoving = false;
+
+    // --- Web Audio API Synthesizer ---
+    const AudioEngine = {
+      ctx: null,
+      muted: false,
+      init() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      },
+      play(freq1, freq2, duration) {
+        if (this.muted) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.frequency.setValueAtTime(freq1, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq2, this.ctx.currentTime + duration);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+      }
+    };
+
+    // --- Spawn Visual Hint Beacon Over Next Required Objective ---
+    function spawnHintBeacon() {
+      if (hintBeacon) scene.remove(hintBeacon);
+      const nextTarget = interactables.find(i => {
+        const p = i.userData;
+        if (p.type === 'exit') return !puzzleState[p.requiredState];
+        if (p.stateKey) return !puzzleState[p.stateKey];
+        if (p.type === 'branches') return !puzzleState.hasBranches;
+        if (p.type === 'flint') return !puzzleState.hasFlint;
+        if (p.type === 'hearth') return !puzzleState.fireLit;
+        if (p.type === 'machete') return !puzzleState.hasMachete;
+        if (p.type === 'vines') return !puzzleState.vinesCleared;
+        if (p.type === 'bees') return !puzzleState.beesCleared;
+        return false;
+      });
+
+      if (nextTarget) {
+        const geo = new THREE.CylinderGeometry(0.1, 0.45, 4, 12);
+        const mat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.55 });
+        hintBeacon = new THREE.Mesh(geo, mat);
+        hintBeacon.position.set(nextTarget.position.x, 2.2, nextTarget.position.z);
+        scene.add(hintBeacon);
+      }
+    }
+
+    // Compare rendered screen-space footprints, not the asset's configured
+    // scale. This keeps small props at their authored size and only reduces a
+    // prop when it visually dominates the current map.
+    function projectedScreenArea(object) {
+      object.updateWorldMatrix(true, true);
+      const box = new THREE.Box3().setFromObject(object);
+      if (box.isEmpty()) return 0;
+
+      const corners = [
+        new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+        new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+        new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+        new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+        new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+        new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+        new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+        new THREE.Vector3(box.max.x, box.max.y, box.max.z)
+      ];
+      const projected = corners.map(point => point.project(camera));
+      const width = renderer.domElement.width;
+      const height = renderer.domElement.height;
+      const xs = projected.map(point => (point.x * 0.5 + 0.5) * width);
+      const ys = projected.map(point => (-point.y * 0.5 + 0.5) * height);
+      const screenWidth = Math.max(0, Math.max(...xs) - Math.min(...xs));
+      const screenHeight = Math.max(0, Math.max(...ys) - Math.min(...ys));
+      return screenWidth * screenHeight;
+    }
+
+    // --- Level Compiler ---
+    function renderLevel(lvlId) {
+      const data = window.LevelManager.getLevel(lvlId);
+      loadLevelState(lvlId);
+      document.getElementById('stage-title').innerText = data.title;
+      document.getElementById('objective-hud').innerText = data.objective;
+
+      if (hintBeacon) { scene.remove(hintBeacon); hintBeacon = null; }
+      while (tilesGroup.children.length > 0) tilesGroup.remove(tilesGroup.children[0]);
+      while (propsGroup.children.length > 0) propsGroup.remove(propsGroup.children[0]);
+      interactables = [];
+      pendingInteraction = null;
+
+      const tileGeo = new THREE.BoxGeometry(1, 0.4, 1);
+      const mats = {
+        grass: new THREE.MeshLambertMaterial({ color: 0x3d7b4e }),
+        dirt: new THREE.MeshLambertMaterial({ color: 0x8a623f }),
+        water: new THREE.MeshLambertMaterial({ color: 0x2e86a1, transparent: true, opacity: 0.85 }),
+        bridge: new THREE.MeshLambertMaterial({ color: 0x6e4324 }),
+        stone: new THREE.MeshLambertMaterial({ color: 0x5e6963 })
+      };
+
+      const hw = Math.floor(data.gridWidth / 2);
+      const hh = Math.floor(data.gridHeight / 2);
+
+      for (let x = -hw; x <= hw; x++) {
+        for (let z = -hh; z <= hh; z++) {
+          // Cut the corners and add small edge notches so every stage reads as
+          // an irregular jungle clearing instead of a perfect square board.
+          const cornerCut = Math.abs(x) >= hw - 1 && Math.abs(z) >= hh - 1;
+          const edgeNotch = (Math.abs(x) === hw || Math.abs(z) === hh) &&
+            Math.abs((x * 31 + z * 17 + lvlId * 13) % 11) === 0;
+          if (cornerCut || edgeNotch) continue;
+
+          const type = data.buildTiles(x, z);
+          let m = mats.grass, y = 0;
+          if (type === 1) { m = mats.dirt; y = 0.02; }
+          else if (type === 2) { m = mats.water; y = -0.15; }
+          else if (type === 3) { m = mats.bridge; y = 0.22; }
+          else if (type === 4) { m = mats.stone; y = 0.05; }
+
+          const tile = new THREE.Mesh(tileGeo, m.clone());
+          tile.position.set(x, y, z);
+          tile.rotation.y = ((x * 13 + z * 7 + lvlId) % 5 - 2) * 0.018;
+          tile.receiveShadow = true;
+          tilesGroup.add(tile);
+        }
+      }
+
+      camera.updateMatrixWorld(true);
+      const mapScreenArea = projectedScreenArea(tilesGroup);
+      const largeAssetThreshold = mapScreenArea * 0.4;
+
+      data.props.forEach(p => {
+        const resolved = (p.stateKey && puzzleState[p.stateKey]) ||
+          (p.type === 'branches' && puzzleState.hasBranches) ||
+          (p.type === 'flint' && puzzleState.hasFlint) ||
+          (p.type === 'machete' && puzzleState.hasMachete) ||
+          (p.type === 'vines' && puzzleState.vinesCleared) ||
+          (p.type === 'bees' && puzzleState.beesCleared);
+        if (resolved) return;
+
+        const group = new THREE.Group();
+        group.position.set(p.x, 0.2, p.z);
+        group.userData = { ...p };
+
+        if (p.assetKey && window.GameAssets.cache[p.assetKey]?.scene) {
+          const original = window.GameAssets.cache[p.assetKey].scene;
+          const clone = original.clone(true);
+          const requestedScale = p.scale || 1.0;
+          clone.scale.set(requestedScale, requestedScale, requestedScale);
+          clone.traverse(child => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+          group.add(clone);
+          group.updateWorldMatrix(true, true);
+          if (projectedScreenArea(clone) > largeAssetThreshold) {
+            clone.scale.multiplyScalar(0.5);
+          }
+        } else if (p.type === 'bees') {
+          const swarmGeo = new THREE.SphereGeometry(0.75, 12, 12);
+          const swarmMat = new THREE.MeshBasicMaterial({ color: 0xdeb326, wireframe: true });
+          const swarm = new THREE.Mesh(swarmGeo, swarmMat);
+          swarm.position.y = 1.0;
+          group.add(swarm);
+        }
+
+        // A stable interaction proxy keeps props clickable after they are
+        // visually scaled down, even when the model has a small or uneven mesh.
+        if (p.name) {
+          const proxy = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.85, 0.85, 1.25, 16),
+            new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+          );
+          proxy.position.y = 0.62;
+          proxy.userData.isInteractionProxy = true;
+          group.add(proxy);
+        }
+
+        propsGroup.add(group);
+        if (p.name) interactables.push(group);
+      });
+
+      if (character) {
+        character.position.set(data.spawn.x, 0.2, data.spawn.z);
+        targetMove.copy(character.position);
+      }
+    }
+
+    // --- Pointer & Touch Input ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    // Three.js uses world units, so this keeps collection local to the player.
+    // The small margin prevents long-distance pickup while still forgiving exact positioning.
+    const PICKUP_DISTANCE = 2.5;
+    const AUTO_INTERACTION_COOLDOWN = 1200;
+
+    function isWithinPickupRange(prop) {
+      if (!character) return false;
+      const dx = character.position.x - prop.position.x;
+      const dz = character.position.z - prop.position.z;
+      return Math.hypot(dx, dz) <= PICKUP_DISTANCE;
+    }
+
+    function checkAutomaticInteraction() {
+      if (!character || isAdPlaying) return;
+
+      const target = interactables.find(prop => {
+        const type = prop.userData.type;
+        return type !== 'bees' && isWithinPickupRange(prop);
+      });
+
+      if (!target) return;
+      const now = performance.now();
+      if (target.userData.nextAutoInteractionAt && now < target.userData.nextAutoInteractionAt) return;
+
+      target.userData.nextAutoInteractionAt = now + AUTO_INTERACTION_COOLDOWN;
+      handleInteract(target);
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+      if (isAdPlaying || e.target.closest('#ui-layer') || e.target.closest('#debug-panel')) return;
+
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const hits = raycaster.intersectObjects(interactables, true);
+      if (hits.length > 0) {
+        let root = hits[0].object;
+        while (root.parent && !interactables.includes(root)) {
+          root = root.parent;
+        }
+        if (!isWithinPickupRange(root)) {
+          pendingInteraction = root;
+          targetMove.set(root.position.x, 0.2, root.position.z);
+          isMoving = true;
+          if (walkAction && currentAction !== walkAction) {
+            currentAction.fadeOut(0.2);
+            walkAction.reset().fadeIn(0.2).play();
+            currentAction = walkAction;
+          }
+          notify(`Moving to ${root.userData.name || 'that spot'}...`);
+          return;
+        }
+        handleInteract(root);
+        return;
+      }
+
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const groundPt = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, groundPt);
+
+      if (groundPt) {
+        if (currentLevel === 1 && !puzzleState.beesCleared && groundPt.x > 1.2) {
+          notify("The angry hornets block the bridge! Smoke them out first.");
+          return;
+        }
+        if (currentLevel === 2 && !puzzleState.vinesCleared && groundPt.x > 3.8) {
+          notify("Dense vines seal the entrance! Use the machete to clear them.");
+          return;
+        }
+
+        targetMove.copy(groundPt);
+        targetMove.y = 0.2;
+        isMoving = true;
+
+        if (walkAction && currentAction !== walkAction) {
+          currentAction.fadeOut(0.2);
+          walkAction.reset().fadeIn(0.2).play();
+          currentAction = walkAction;
+        }
+      }
+    });
+
+    function completeLevel() {
+      levelStates[currentLevel] = { ...puzzleState };
+      const nextLevel = currentLevel + 1;
+
+      if (nextLevel > window.LevelManager.getLevelCount()) {
+        saveGame();
+        notify("🏆 All stages complete! Your progress is saved in this browser.");
+        document.getElementById('objective-hud').innerText = "All stages complete! Explore the sanctuary or replay from your saved game.";
+        return;
+      }
+
+      currentLevel = nextLevel;
+      loadLevelState(currentLevel);
+      saveGame();
+      AdManager.showInterstitial(() => {
+        renderLevel(currentLevel);
+        notify(`Welcome to ${window.LevelManager.getLevel(currentLevel).title}!`);
+      });
+    }
+
+    function handleInteract(prop) {
+      const type = prop.userData.type;
+      if (hintBeacon) { scene.remove(hintBeacon); hintBeacon = null; }
+
+      if (type === 'collectible') {
+        const key = prop.userData.stateKey;
+        if (key && !puzzleState[key]) {
+          puzzleState[key] = true;
+          addInventory(`💎 ${prop.userData.name}`, key);
+          propsGroup.remove(prop);
+          interactables = interactables.filter(i => i !== prop);
+          addGems(prop.userData.reward || 10);
+          saveGame();
+          AudioEngine.play(440, 880, 0.15);
+          notify(`Collected ${prop.userData.name}! (+${prop.userData.reward || 10} Gems)`);
+        }
+      }
+      else if (type === 'exit') {
+        const requiredState = prop.userData.requiredState;
+        if (requiredState && puzzleState[requiredState]) {
+          propsGroup.remove(prop);
+          interactables = interactables.filter(i => i !== prop);
+          addGems(25);
+          saveGame();
+          AudioEngine.play(523, 1046, 0.35);
+          completeLevel();
+        } else {
+          notify(`Find ${requiredState ? requiredState.replace(/^has/, '').replace(/([A-Z])/g, ' $1').toLowerCase() : 'the required item'} first.`);
+        }
+      }
+      else if (type === 'branches') {
+        addInventory('🪵 Branches', 'branches');
+        puzzleState.hasBranches = true;
+        propsGroup.remove(prop);
+        interactables = interactables.filter(i => i !== prop);
+        addGems(10);
+        saveGame();
+        AudioEngine.play(440, 880, 0.15);
+        notify("Collected dry wood branches! (+10 Gems)");
+      } 
+      else if (type === 'flint') {
+        addInventory('💎 Flint', 'flint');
+        puzzleState.hasFlint = true;
+        propsGroup.remove(prop);
+        interactables = interactables.filter(i => i !== prop);
+        addGems(10);
+        saveGame();
+        AudioEngine.play(440, 880, 0.15);
+        notify("Collected sharp flint stone! (+10 Gems)");
+      } 
+      else if (type === 'hearth') {
+        if (!puzzleState.hasBranches) {
+          notify("You need dry wood branches to prepare the campfire.");
+        } else if (!puzzleState.hasFlint) {
+          notify("Wood is set! Now strike it with flint to spark a flame.");
+        } else if (!puzzleState.fireLit) {
+          puzzleState.fireLit = true;
+          saveGame();
+          const light = new THREE.PointLight(0xff6600, 3.5, 8);
+          light.position.set(-1, 1.2, -2);
+          propsGroup.add(light);
+          const fireMesh = new THREE.Mesh(
+            new THREE.ConeGeometry(0.35, 0.8, 6),
+            new THREE.MeshBasicMaterial({ color: 0xff3700 })
+          );
+          fireMesh.position.set(-1, 0.7, -2);
+          propsGroup.add(fireMesh);
+
+          addGems(20);
+          AudioEngine.play(523, 1046, 0.35);
+          notify("Fire is roaring! Thick smoke billows toward the bridge! (+20 Gems)");
+
+          setTimeout(() => {
+            const bees = interactables.find(i => i.userData.type === 'bees');
+            if (bees) {
+              propsGroup.remove(bees);
+              interactables = interactables.filter(i => i !== bees);
+              puzzleState.beesCleared = true;
+              saveGame();
+              notify("The hornets dispersed! Cross the bridge to enter Stage 2!");
+              document.getElementById('objective-hud').innerText = "Walk across the wooden bridge to reach the Sun Temple!";
+            }
+          }, 1400);
+        }
+      }
+      else if (type === 'machete') {
+        addInventory('🪓 Machete', 'machete');
+        puzzleState.hasMachete = true;
+        propsGroup.remove(prop);
+        interactables = interactables.filter(i => i !== prop);
+        addGems(15);
+        saveGame();
+        AudioEngine.play(440, 880, 0.15);
+        notify("Acquired sharp machete! (+15 Gems)");
+      }
+      else if (type === 'vines') {
+        if (puzzleState.hasMachete) {
+          propsGroup.remove(prop);
+          interactables = interactables.filter(i => i !== prop);
+          puzzleState.vinesCleared = true;
+          addGems(50);
+          saveGame();
+          AudioEngine.play(523, 1046, 0.35);
+          notify("🏆 Victory! You unlocked the Sun Temple! (+50 Gems)");
+          document.getElementById('objective-hud').innerText = "Stage Complete! Click the Reward button or explore the temple.";
+        } else {
+          notify("The ancient vines are too tough for bare hands. Find a cutting tool.");
+        }
+      }
+    }
+
+    function addInventory(label, id) {
+      if (inventory.length < 4) {
+        inventory.push({ label, id });
+        updateInventoryUI();
+        saveGame();
+      }
+    }
+
+    function updateInventoryUI() {
+      for (let i = 0; i < 4; i++) {
+        const slot = document.getElementById(`slot-${i}`);
+        if (inventory[i]) {
+          const parts = inventory[i].label.split(' ');
+          slot.innerHTML = `<span class="icon">${parts[0]}</span><span>${parts[1]}</span>`;
+        } else {
+          slot.innerHTML = `<span class="icon">🔍</span><span>Empty</span>`;
+        }
+      }
+    }
+
+    function selectSlot(idx) {
+      selectedSlot = idx;
+      for (let i = 0; i < 4; i++) {
+        document.getElementById(`slot-${i}`).classList.toggle('active', i === idx);
+      }
+    }
+
+    function notify(text) {
+      const box = document.getElementById('alert-dialog');
+      box.innerText = text;
+      box.style.display = 'block';
+      clearTimeout(box.timer);
+      box.timer = setTimeout(() => { box.style.display = 'none'; }, 3500);
+    }
+
+    // --- Initialize Assets & Character ---
+    const gltfLoader = new THREE.GLTFLoader();
+
+    async function init() {
+      const debugList = document.getElementById('debug-entries');
+      debugList.innerHTML = '';
+
+      await window.GameAssets.loadAll(gltfLoader, (key, path, status, error) => {
+        const row = document.createElement('div');
+        row.className = 'debug-item';
+        const isOk = status === 'LOADED';
+        row.innerHTML = `<span>${key}: <small>${path}</small></span><span class="${isOk ? 'debug-ok' : 'debug-fail'}">${isOk ? '✔ OK' : `✖ ${error || 'FAILED'}`}</span>`;
+        debugList.appendChild(row);
+      });
+
+      const charAsset = window.GameAssets.cache['character'];
+      if (charAsset && charAsset.scene) {
+        character = charAsset.scene;
+        character.scale.set(1.45, 1.45, 1.45);
+        character.traverse(c => { if (c.isMesh) c.castShadow = true; });
+        scene.add(character);
+
+        mixer = new THREE.AnimationMixer(character);
+        const clips = charAsset.animations;
+        const idleClip = THREE.AnimationClip.findByName(clips, 'idle') || clips[0];
+        const walkClip = THREE.AnimationClip.findByName(clips, 'walk') || clips[1];
+
+        if (idleClip) idleAction = mixer.clipAction(idleClip);
+        if (walkClip) walkAction = mixer.clipAction(walkClip);
+
+        if (idleAction) {
+          currentAction = idleAction;
+          currentAction.play();
+        }
+      }
+
+      renderLevel(currentLevel);
+      updateInventoryUI();
+      saveGame();
+      document.getElementById('loading-overlay').style.display = 'none';
+    }
+
+    // --- Main Render Loop ---
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+
+      if (mixer && !isAdPlaying) mixer.update(delta);
+      if (hintBeacon) hintBeacon.rotation.y += delta * 2;
+
+      if (character && isMoving && !isAdPlaying) {
+        const diff = new THREE.Vector3().subVectors(targetMove, character.position);
+        diff.y = 0;
+        const dist = diff.length();
+
+        if (dist > 0.08) {
+          diff.normalize();
+          character.position.addScaledVector(diff, moveSpeed * delta);
+          character.rotation.y = Math.atan2(diff.x, diff.z);
+        } else {
+          isMoving = false;
+          if (idleAction && currentAction !== idleAction) {
+            currentAction.fadeOut(0.18);
+            idleAction.reset().fadeIn(0.18).play();
+            currentAction = idleAction;
+          }
+
+          if (pendingInteraction && interactables.includes(pendingInteraction)) {
+            const interaction = pendingInteraction;
+            pendingInteraction = null;
+            handleInteract(interaction);
+          }
+
+        }
+      }
+
+      checkAutomaticInteraction();
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      const a = window.innerWidth / window.innerHeight;
+      camera.left = -viewSize * a;
+      camera.right = viewSize * a;
+      camera.top = viewSize;
+      camera.bottom = -viewSize;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    window.addEventListener('beforeunload', saveGame);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveGame();
+    });
+
+    init();
+    animate();
+  </script>
+</body>
+</html>
